@@ -28,6 +28,7 @@ class DataCollecter:
 
         # Get Camera Info #
         self.cam_ids = list(env.camera_reader.camera_dict.keys())
+        print(self.cam_ids)
         self.cam_ids.sort()
 
         _, full_cam_ids = self.get_camera_feed()

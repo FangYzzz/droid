@@ -356,7 +356,7 @@ class CalibrationPage(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
-
+        print(controller)
         # Title #
         how_to_title_lbl = Label(self, text="Calibration Hub", font=Font(size=30, weight="bold"))
         how_to_title_lbl.pack(pady=5)

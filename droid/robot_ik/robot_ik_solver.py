@@ -31,8 +31,8 @@ class RobotIKSolver:
             enable_joint_position_limits=True,
             minimum_distance_from_joint_position_limit=0.3,
             joint_position_limit_velocity_scale=0.95,
-            max_cartesian_velocity_control_iterations=300,
-            max_nullspace_control_iterations=300,
+            max_cartesian_velocity_control_iterations=800,
+            max_nullspace_control_iterations=800,
         )
 
         self._cart_effector_6d = cartesian_6d_velocity_effector.Cartesian6dVelocityEffector(

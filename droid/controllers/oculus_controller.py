@@ -19,8 +19,8 @@ class VRPolicy:
     def __init__(
         self,
         right_controller: bool = True,
-        max_lin_vel: float = 1,
-        max_rot_vel: float = 1,
+        max_lin_vel: float = 0.5,
+        max_rot_vel: float = 0.5,
         max_gripper_vel: float = 1,
         spatial_coeff: float = 1,
         pos_action_gain: float = 5,

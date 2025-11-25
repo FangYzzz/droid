@@ -16,6 +16,7 @@ from droid.trajectory_utils.trajectory_reader import TrajectoryReader
 from droid.trajectory_utils.trajectory_writer import TrajectoryWriter
 
 
+
 def collect_trajectory(
     env,
     controller=None,
@@ -63,7 +64,7 @@ def collect_trajectory(
     num_steps = 0
     if reset_robot:
         env.reset(randomize=randomize_reset)
-
+    last_time =None
     # Begin! #
     while True:
         # Collect Miscellaneous Info #
@@ -92,7 +93,7 @@ def collect_trajectory(
         sleep_left = (1 / env.control_hz) - (comp_time / 1000)
         if sleep_left > 0:
             time.sleep(sleep_left)
-
+        now = time.time()
         # Moniter Control Frequency #
         # moniter_control_frequency = True
         # if moniter_control_frequency:
@@ -116,18 +117,21 @@ def collect_trajectory(
 
         # Check Termination #
         num_steps += 1
-        if horizon is not None:
-            end_traj = horizon == num_steps
-        else:
-            end_traj = controller_info["success"] or controller_info["failure"]
+        if last_time is not None:
+            print(last_time-now)
+        last_time = now
+        # if horizon is not None:
+        #     end_traj = horizon == num_steps
+        # else:
+        #     end_traj = controller_info["success"] or controller_info["failure"]
 
-        # Close Files And Return #
-        if end_traj:
-            if recording_folderpath:
-                env.camera_reader.stop_recording()
-            if save_filepath:
-                traj_writer.close(metadata=controller_info)
-            return controller_info
+        # # Close Files And Return #
+        # if end_traj:
+        #     if recording_folderpath:
+        #         env.camera_reader.stop_recording()
+        #     if save_filepath:
+        #         traj_writer.close(metadata=controller_info)
+        #     return controller_info
 
 
 def calibrate_camera(

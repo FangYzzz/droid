@@ -11,7 +11,7 @@ class MultiCameraWrapper:
         # Open Cameras #
         zed_cameras = gather_zed_cameras()
         self.camera_dict = {cam.serial_number: cam for cam in zed_cameras}
-
+        print(zed_cameras)
         # Set Correct Parameters #
         for cam_id in self.camera_dict.keys():
             cam_type = get_camera_type(cam_id)

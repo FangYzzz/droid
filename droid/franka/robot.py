@@ -16,6 +16,9 @@ from droid.robot_ik.robot_ik_solver import RobotIKSolver
 
 
 class FrankaRobot:
+    def __init__(self): ###
+        self.launch_robot()
+        self.last_gripper_cmd = None
     def launch_controller(self):
         try:
             self.kill_controller()
@@ -45,9 +48,14 @@ class FrankaRobot:
 
     def update_command(self, command, action_space="cartesian_velocity", gripper_action_space=None, blocking=False):
         action_dict = self.create_action_dict(command, action_space=action_space, gripper_action_space=gripper_action_space)
-
+        gripper_cmd = command[-1]
+        # print("gripper_cmd: ",gripper_cmd)
+        # print("elf.last_gripper_cmd: ",self.last_gripper_cmd)
+        if not gripper_cmd==self.last_gripper_cmd:
+            self.update_gripper(action_dict["gripper_position"], velocity=False, blocking=blocking)
         self.update_joints(action_dict["joint_position"], velocity=False, blocking=blocking)
-        self.update_gripper(action_dict["gripper_position"], velocity=False, blocking=blocking)
+        self.last_gripper_cmd = gripper_cmd
+        # self.update_gripper(action_dict["gripper_position"], velocity=False, blocking=blocking)
 
         return action_dict
 

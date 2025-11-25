@@ -16,6 +16,7 @@ def gather_zed_cameras():
     all_zed_cameras = []
     try:
         cameras = sl.Camera.get_device_list()
+        print("zed:  ",cameras)
     except NameError:
         return []
 
