@@ -1190,9 +1190,13 @@ droid/user_interface/gui_parameters.py
 droid/user_interface/misc.py
 droid/user_interface/text.py
 scripts/main.py
-scripts/main_delta_action.py
-scripts/main_delta_action_eef.py
-scripts/main_ori.py
+scripts/main_delta_absolute.py
+scripts/main_delta_absolute_6drot_eef.py
+scripts/main_delta_absolute_eef.py
+scripts/main_delta_absolute_eef_rpc.py
+scripts/main_delta_delta_eef.py
+scripts/main_delta_joint.py
+scripts/main_flower.py
 scripts/postprocess.py
 scripts/convert/svo_to_depth.py
 scripts/convert/svo_to_mp4.py

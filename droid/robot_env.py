@@ -164,7 +164,7 @@ class RobotEnv_Franky(gym.Env):
         self.randomize_high = np.array([0.1, 0.2, 0.1, 0.3, 0.3, 0.3])
         self.DoF = 7 if ("cartesian" in action_space) else 8
         self.control_hz = 15 # 15
-        self.robot = Robot("192.168.1.1") 
+        self.robot = Robot("172.17.0.2") 
         self.robot.relative_dynamics_factor = 0.06
         # urdf_model = self.robot.model_urdf
         # print(urdf_model)

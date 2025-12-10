@@ -49,7 +49,7 @@ class Args:
     max_timesteps: int = 3000  # 600
     # How many actions to execute from a predicted action chunk before querying policy server again
     # 8 is usually a good default (equals 0.5 seconds of action execution).
-    open_loop_horizon: int = 45  # 8 
+    open_loop_horizon: int = 45  #45 8 
 
     # Remote server parameters
     remote_host: str = "0.0.0.0"  # point this to the IP address of the policy server, e.g., "192.168.1.100"
@@ -212,9 +212,9 @@ def main(args: Args):
                 # action = np.clip(action, -0.2, 0.2) ###
                 # action[:-2] = action[:-2]*2
                 action[:3] = action[:3] + eef_state[:3]
-                # action[0] = action[0]+0.005
-                # action[1] = action[1]+0.005
-                # action[2] = action[2]+0.005
+                action[0] = action[0]+0.005
+                action[1] = action[1]+0.005
+                action[2] = action[2]+0.005
                 action[3:6] = rpy_cmd
                 action_ = np.concatenate([action[:3], rpy_cmd, gripper],axis=-1)
                 

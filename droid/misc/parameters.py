@@ -3,7 +3,7 @@
 
 # # Robot Params #
 # nuc_ip = ""
-# robot_ip = "192.168.1.1"
+# robot_ip = "172.17.0.2"
 # laptop_ip = ""
 # sudo_password = ""
 # robot_type = ""  # 'panda' or 'fr3'
@@ -31,7 +31,7 @@ from cv2 import aruco
 
 # Robot Params #
 nuc_ip =None #"0.0.0.0" # ""
-robot_ip = "192.168.1.1"
+robot_ip = "172.17.0.2"
 laptop_ip = "127.0.1.1"
 sudo_password = "F990123y"
 robot_type = "fr3"  # 'panda' or 'fr3'

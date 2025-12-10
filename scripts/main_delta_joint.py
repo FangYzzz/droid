@@ -221,14 +221,6 @@ def main(args: Args):
             if not (0 <= success <= 1):
                 print(f"Success must be a number in [0, 100] but got: {success * 100}")
 
-        # df = df.append(
-        #     {
-        #         "success": success,
-        #         "duration": t_step,
-        #         "video_filename": save_filename,
-        #     },
-        #     ignore_index=True,
-        # )
         df = pd.concat([
             df,
             pd.DataFrame([{

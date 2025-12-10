@@ -230,13 +230,7 @@ def main(args: Args):
                 # else:
                 #     # pass
                 action = pred_action_chunk[actions_from_chunk_completed]
-                # print("action: ",action)
-                # action = action*5 ###
                 actions_from_chunk_completed += 1
-                # print("chunkid: ",actions_from_chunk_completed)
-                # Binarize gripper action
-                # print(action[-1].item())
-                # print(curr_obs["gripper_position"])
                 if action[-1].item() > 0.5:
                 # if False:
                     # action[-1] = 1.0
@@ -246,13 +240,6 @@ def main(args: Args):
                     # action[-1] = 0.0
                     action = np.concatenate([action[:-1], np.zeros((1,))])
                     gripper = np.zeros((1,))
-                # print(action)
-
-                # clip all dimensions of action to [-1, 1]
-                # action = np.clip(action, -1, 1)
-                # action[3:6] = np.clip(action[3:6], -3.149265, 3.149265)
-                # action[3:6] = np.clip(action[3:6], -0.1, 0.1)
-                # action[:3] = np.clip(action[:3], -0.1, 0.1)
 
                 #----------------------------quat -> rpy----------------------------#
                 R_state = R.from_euler('xyz', eef_state[3:6]).as_matrix()
@@ -312,14 +299,6 @@ def main(args: Args):
             if not (0 <= success <= 1):
                 print(f"Success must be a number in [0, 100] but got: {success * 100}")
 
-        # df = df.append(
-        #     {
-        #         "success": success,
-        #         "duration": t_step,
-        #         "video_filename": save_filename,
-        #     },
-        #     ignore_index=True,
-        # )
         df = pd.concat([
             df,
             pd.DataFrame([{
@@ -475,13 +454,7 @@ def run_one_rollout(
                 assert pred_action_chunk.shape == (50, 8)
 
             action = pred_action_chunk[actions_from_chunk_completed]
-            # print("action: ",action)
-            # action = action*5 ###
             actions_from_chunk_completed += 1
-            # print("chunkid: ",actions_from_chunk_completed)
-            # Binarize gripper action
-            # print(action[-1].item())
-            # print(curr_obs["gripper_position"])
             if action[-1].item() > 0.5:
             # if False:
                 # action[-1] = 1.0
@@ -491,7 +464,6 @@ def run_one_rollout(
                 # action[-1] = 0.0
                 action = np.concatenate([action[:-1], np.zeros((1,))])
                 gripper = np.zeros((1,))
-            # print(action)
 
             #----------------------------quat -> rpy----------------------------#
             R_state = R.from_euler('xyz', eef_state[3:6]).as_matrix()
@@ -500,14 +472,10 @@ def run_one_rollout(
             q_action = q_action / np.clip(norm, 1e-12, None)
             sign = np.where(q_action[..., 3:4] < 0, -1.0, 1.0)
             q_action = q_action * sign
-            # print(q_action)
             R_delta = R.from_quat(q_action).as_matrix()
             rpy_cmd = R.from_matrix(R_delta).as_euler('xyz', degrees=False)
             #-------------------------------------------------------------------#
             
-            # action[:-2] = np.clip(action[:-2], -0.1, .1)
-            # action = np.clip(action, -0.2, 0.2) ###
-            # action[:-2] = action[:-2]*2
             action[:3] = action[:3] + eef_state[:3]
             action[0] = action[0]+0.005
             action[1] = action[1]+0.005
