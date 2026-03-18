@@ -134,9 +134,9 @@ class ZedCamera:
         sl_params.set_from_serial_number(int(self.serial_number))
         sl_params.camera_image_flip = sl.FLIP_MODE.OFF
         status = self._cam.open(sl_params)
-        if status == sl.ERROR_CODE.POTENTIAL_CALIBRATION_ISSUE:
-            pass
-        elif status != sl.ERROR_CODE.SUCCESS:
+        # if status == sl.ERROR_CODE.POTENTIAL_CALIBRATION_ISSUE:
+        #     pass
+        if status != sl.ERROR_CODE.SUCCESS:
             raise RuntimeError("Camera Failed To Open")
 
         # Save Intrinsics #

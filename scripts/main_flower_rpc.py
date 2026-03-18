@@ -1,6 +1,3 @@
-# ruff: noqa
-
-
 import contextlib
 import dataclasses
 import datetime
@@ -38,12 +35,19 @@ import contextlib
 import signal
 import threading
 
+# 用于连接 FlowerVLA 推理 server
+from openpi_client import image_tools
+import requests
+import json_numpy
+from json_numpy import loads
+json_numpy.patch()
+from pathlib import Path
 
 
 faulthandler.enable()
 
 # DROID data collection frequency -- we slow down execution to match this frequency
-DROID_CONTROL_FREQUENCY = 15  #15
+DROID_CONTROL_FREQUENCY = 6  #15
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(message)s')
@@ -68,48 +72,23 @@ class Args:
     wrist_camera_id: str = "11022812"  # "11022812"
 
     # Policy parameters
-    external_camera: Optional[str] = (
-        # None  # which external camera should be fed to the policy, choose from ["left", "right"]
-        "left"
-    )
+    external_camera: Optional[str] = "left"
 
     # Rollout parameters
-    max_timesteps: int = 1200  # 600
-    # How many actions to execute from a predicted action chunk before querying policy server again
-    # 8 is usually a good default (equals 0.5 seconds of action execution).
-    open_loop_horizon: int = 45  # 8 
+    max_timesteps: int = 360  # 3000
+    # # How many actions to execute from a predicted action chunk before querying policy server again
+    # # 8 is usually a good default (equals 0.5 seconds of action execution).
+    # open_loop_horizon: int = 45  # 8 
 
     # Remote server parameters
     remote_host: str = "0.0.0.0"  # point this to the IP address of the policy server, e.g., "192.168.1.100"
-    remote_port: int = (
-        8000  # point this to the port of the policy server, default server port for openpi servers is 8000
-    )
+    remote_port: int = 8003
 
     ws_server: bool = True                   # True 时以服务端模式启动（供 A 调用）
     ws_host: str = "0.0.0.0"
     ws_port: int = 4242
     max_concurrent: int = 1
 
-# We are using Ctrl+C to optionally terminate rollouts early -- however, if we press Ctrl+C while the policy server is
-# waiting for a new action chunk, it will raise an exception and the server connection dies.
-# This context manager temporarily prevents Ctrl+C and delays it after the server call is complete.
-# @contextlib.contextmanager
-# def prevent_keyboard_interrupt():
-#     """Temporarily prevent keyboard interrupts by delaying them until after the protected code."""
-#     interrupted = False
-#     original_handler = signal.getsignal(signal.SIGINT)
-
-#     def handler(signum, frame):
-#         nonlocal interrupted
-#         interrupted = True
-
-#     signal.signal(signal.SIGINT, handler)
-#     try:
-#         yield
-#     finally:
-#         signal.signal(signal.SIGINT, original_handler)
-#         if interrupted:
-#             raise KeyboardInterrupt
         
 @contextlib.contextmanager
 def prevent_keyboard_interrupt():
@@ -137,6 +116,22 @@ def prevent_keyboard_interrupt():
         if interrupted:
             raise KeyboardInterrupt
 
+def save_np_image(img: np.ndarray, path: str):
+    assert img.dtype == np.uint8
+    assert img.ndim == 3 and img.shape[2] == 3
+    Image.fromarray(img).save(path)
+
+def prepare_image_256(img, size=(256, 256)):
+        """中心裁剪成正方形，再缩放到指定大小 (默认 256x256)，输出 RGB uint8。"""
+        if img is None:
+            return None
+        h, w = img.shape[:2]
+        side = min(h, w)
+        y0 = (h - side) // 2
+        x0 = (w - side) // 2
+        crop = img[y0:y0 + side, x0:x0 + side]
+        out = cv2.resize(crop, size, interpolation=cv2.INTER_AREA)
+        return out.astype(np.uint8, copy=False)
 
 def main(args: Args):
    
@@ -145,31 +140,43 @@ def main(args: Args):
         args.external_camera is not None and args.external_camera in ["left", "right"]
     ), f"Please specify an external camera to use for the policy, choose from ['left', 'right'], but got {args.external_camera}"
 
-    # Initialize the Panda environment. Using joint velocity action space and gripper position action space is very important.
-    # env = RobotEnv(action_space="joint_velocity", gripper_action_space="position")
-    env = RobotEnv(action_space="cartesian_position", gripper_action_space="position")
+    # Initialize the Panda environment
+    env = RobotEnv(action_space="joint_position", gripper_action_space="position")
 
     # Connect to the policy server
     policy_client = websocket_client_policy.WebsocketClientPolicy(args.remote_host, args.remote_port)
 
     df = pd.DataFrame(columns=["success", "duration", "video_filename"])
     robot_state,_ = env.get_state()
-    print(robot_state["cartesian_position"])
-    eef_q = copy.deepcopy(robot_state["cartesian_position"][3:6])
-    gripper = None
+    print("Initial joint positions:", robot_state.get("joint_positions", "N/A"))
+    
+    SERVER = "http://0.0.0.0:8003"
+
     while True:
-        instruction = input("Enter instruction: ")
+        instruction = input("Enter instruction: ").strip()
+        if len(instruction) == 0:
+            print("Empty instruction, please input again.")
+            continue
 
-        # Rollout parameters
-        actions_from_chunk_completed = 0
-        pred_action_chunk = None
-
+        # 在每个新指令开始前，重置 Flower server 的任务（/reset）
+        requests.post(f"{SERVER}/reset", json={"text": instruction})
+        first_round = True
         # Prepare to save video of rollout
-        timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H:%M:%S")
-        video_wirst = []
+        video_wrist = []
         video_left = []
         bar = tqdm.tqdm(range(args.max_timesteps))
-        print("Running rollout... press Ctrl+C to stop early.")
+        print("Running rollout with FlowerVLA... press Ctrl+C to stop early.")
+
+        # # Rollout parameters
+        # actions_from_chunk_completed = 0
+        # pred_action_chunk = None
+
+        # # Prepare to save video of rollout
+        # timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H:%M:%S")
+        # video_wrist = []
+        # video_left = []
+        # bar = tqdm.tqdm(range(args.max_timesteps))
+        # print("Running rollout... press Ctrl+C to stop early.")
         
         for t_step in bar:
             start_time = time.time()
@@ -179,11 +186,10 @@ def main(args: Args):
                     args,
                     env.get_observation(),
                     # Save the first observation to disk
-                    save_to_disk=t_step == 0,
+                    save_to_disk=t_step == 0,  # save_to_disk=False,
                 )
-                # print(curr_obs["cartesian_position"])
 
-                video_wirst.append(curr_obs["wrist_image"]) ###
+                video_wrist.append(curr_obs["wrist_image"]) ###
                 video_left.append(curr_obs[f"{args.external_camera}_image"]) ###
                 # Send websocket request to policy server if it's time to predict a new chunk
                 if actions_from_chunk_completed == 0 or actions_from_chunk_completed >= args.open_loop_horizon:
@@ -273,14 +279,16 @@ def main(args: Args):
                 elapsed_time = time.time() - start_time
                 if elapsed_time < 1 / DROID_CONTROL_FREQUENCY:
                     time.sleep(1 / DROID_CONTROL_FREQUENCY - elapsed_time)
+            
             except KeyboardInterrupt:
+                print("Rollout interrupted by user.")
                 break
         
         save_filename = "None"
         if input("Save videos? (enter y or n) ").lower() == "y":
-            video_wirst = np.stack(video_wirst)
+            video_wrist = np.stack(video_wrist)
             save_filename = "video_" + timestamp + "_wrist"
-            ImageSequenceClip(list(video_wirst), fps=10).write_videofile(save_filename + ".mp4", codec="libx264")
+            ImageSequenceClip(list(video_wrist), fps=10).write_videofile(save_filename + ".mp4", codec="libx264")
             video_left = np.stack(video_left)
             save_filename = "video_" + timestamp + "_left"
             ImageSequenceClip(list(video_left), fps=10).write_videofile(save_filename + ".mp4", codec="libx264")
@@ -346,7 +354,7 @@ def _extract_observation(args: Args, obs_dict, *, save_to_disk=False):
     # In addition to image observations, also capture the proprioceptive state
     robot_state = obs_dict["robot_state"]
     cartesian_position = np.array(robot_state["cartesian_position"])
-    # joint_position = np.array(robot_state["joint_positions"])
+    joint_position = np.array(robot_state["joint_positions"])
     gripper_position = np.array([robot_state["gripper_position"]])
 
     # Save the images to disk so that they can be viewed live while the robot is running
@@ -363,7 +371,7 @@ def _extract_observation(args: Args, obs_dict, *, save_to_disk=False):
         "right_image": right_image,
         "wrist_image": wrist_image,
         "cartesian_position": cartesian_position,
-        # "joint_position": joint_position,
+        "joint_position": joint_position,
         "gripper_position": gripper_position,
     }
 
@@ -401,20 +409,19 @@ def run_one_rollout(
     # 如果外面没传 env，就自己建一个；如果传了就直接用同一个
     owns_env = False
     if env is None:
-        env = RobotEnv(action_space="cartesian_position", gripper_action_space="position")
+        env = RobotEnv(action_space="joint_position", gripper_action_space="position")
         owns_env = True
 
     policy_client = websocket_client_policy.WebsocketClientPolicy(args.remote_host, args.remote_port)
 
     df = pd.DataFrame(columns=["success", "duration", "video_filename"])
-    robot_state,_ = env.get_state()
-    gripper = None
+    robot_state, _ = env.get_state()
 
-    actions_from_chunk_completed = 0
-    pred_action_chunk = None
+    # 在每个新指令开始前，重置 Flower server 的任务（/reset）
+    SERVER = "http://0.0.0.0:8003"
+    requests.post(f"{SERVER}/reset", json={"text": instruction})
 
-    timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H:%M:%S")
-    video_wirst, video_left = [], []
+    video_wrist, video_left = [], []
     bar = tqdm.tqdm(range(args.max_timesteps))
     print("Running rollout (WS single pass)...",instruction)
 
@@ -428,73 +435,65 @@ def run_one_rollout(
 
             start_time = time.time()
             curr_obs = _extract_observation(args, env.get_observation(), save_to_disk=(t_step == 0))
-            video_wirst.append(curr_obs["wrist_image"])
+            video_wrist.append(curr_obs["wrist_image"])
             video_left.append(curr_obs[f"{args.external_camera}_image"])
 
-            if actions_from_chunk_completed == 0 or actions_from_chunk_completed >= args.open_loop_horizon:
-                robot_state_,_ = env.get_state()
-                eef_state = copy.deepcopy(robot_state_["cartesian_position"])
-                eef_pose = curr_obs["cartesian_position"]
-                eef_rpy = eef_pose[3:6]
-                eef_quat = R.from_euler('xyz', eef_rpy, degrees=False).as_quat()
-                eef_pose = np.concatenate([eef_pose[:3], eef_quat], axis=-1)
-                actions_from_chunk_completed = 0
+            # 构造发给 Flower 的图片 payload
+            primary_image = curr_obs[f"{args.external_camera}_image"]
+            wrist_image = curr_obs["wrist_image"]
 
-                request_data = {
-                    "observation/exterior_image_1_left": image_tools.resize_with_pad(
-                        curr_obs[f"{args.external_camera}_image"], 224, 224
-                    ),
-                    "observation/wrist_image_left": image_tools.resize_with_pad(curr_obs["wrist_image"], 224, 224),
-                    "observation/eef_position": eef_pose,
-                    "observation/gripper_position": curr_obs["gripper_position"],
-                    "prompt": instruction,
-                }
-                with prevent_keyboard_interrupt():
-                    pred_action_chunk = policy_client.infer(request_data)["actions"]
-                assert pred_action_chunk.shape == (50, 8)
+            # 调用 Flower server 的 /query，得到关节位置 + gripper
+            primary_image = prepare_image_256(primary_image)
+            wrist_image = prepare_image_256(wrist_image)  # padding
+            primary_resized = image_tools.resize_with_pad(primary_image, 224, 224)
+            wrist_resized = image_tools.resize_with_pad(wrist_image, 224, 224)
+            save_np_image(primary_resized, "inference_primary.png")
+            save_np_image(wrist_resized, "inference_wrist.png")
+            with prevent_keyboard_interrupt():
+                resp = requests.post(
+                    f"{SERVER}/query",
+                    json={
+                        "primary_image":primary_resized,              #primary_image.astype(np.uint8),  # Flower 期望 uint8 [H, W, 3]
+                        "wrist_image": wrist_resized,
+                    },
+                    # timeout=1.0,
+                )
+            if resp.status_code != 200:  # 200: HTTP 返回码, 请求成功（server 正常返回 action）
+                print(f"[Flower] /query failed, status: {resp.status_code}, text: {resp.text}")
+                break
 
-            action = pred_action_chunk[actions_from_chunk_completed]
-            actions_from_chunk_completed += 1
-            if action[-1].item() > 0.5:
-            # if False:
-                # action[-1] = 1.0
-                action = np.concatenate([action[:-1], np.ones((1,))])
-                gripper = np.ones((1,))
+            action = np.array(loads(resp.json()))  # numpy array
+            print("action chunk horizon: ",action.shape)
+            # 兼容 (1,8) 或 (8,) 形状
+            if action.ndim == 2 and action.shape[0] == 1:
+                action = action[0]
+            if action.ndim != 1:
+                print(f"[Flower] unexpected action shape: {action.shape}")
+                break
+            if action.shape[0] < 8:
+                print(f"[Flower] action dim < 8, got {action.shape}")
+                break
+
+            # [7 joints, 1 gripper]
+            joint_targets = action[:7].astype(np.float32)
+            gripper_target = action[7]
+            if gripper_target > 0.8:  # 0.8
+                gripper_target=1.0
             else:
-                # action[-1] = 0.0
-                action = np.concatenate([action[:-1], np.zeros((1,))])
-                gripper = np.zeros((1,))
+                gripper_target = 0.0
 
-            #----------------------------quat -> rpy----------------------------#
-            R_state = R.from_euler('xyz', eef_state[3:6]).as_matrix()
-            q_action = action[3:7] 
-            norm = np.linalg.norm(q_action, axis=-1, keepdims=True)
-            q_action = q_action / np.clip(norm, 1e-12, None)
-            sign = np.where(q_action[..., 3:4] < 0, -1.0, 1.0)
-            q_action = q_action * sign
-            R_delta = R.from_quat(q_action).as_matrix()
-            rpy_cmd = R.from_matrix(R_delta).as_euler('xyz', degrees=False)
-            #-------------------------------------------------------------------#
-            
-            action[:3] = action[:3] + eef_state[:3]
-            action[0] = action[0]+0.005
-            action[1] = action[1]+0.005
-            action[2] = action[2]+0.005
-            action[3:6] = rpy_cmd
-            action_ = np.concatenate([action[:3], rpy_cmd, gripper],axis=-1)
-            
-            # Prevent touching the table
-            if action_[2]<0.22:
-                action_[2] = 0.22
-            # print(action[3:6])
-            env.step(action_)
+            robot_action = np.concatenate([joint_targets, [gripper_target]], axis=-1)
+            env.step(robot_action)
 
             # Sleep to match DROID data collection frequency
             elapsed_time = time.time() - start_time
             if elapsed_time < 1 / DROID_CONTROL_FREQUENCY:
                 time.sleep(1 / DROID_CONTROL_FREQUENCY - elapsed_time)
+    
     except KeyboardInterrupt:
+        print("Rollout interrupted by user.")
         pass
+
     finally:
         # 每次 rollout 结束都把机器人复位
         try:
@@ -505,10 +504,11 @@ def run_one_rollout(
             logger.warning(f"env.reset() failed: {e}")
 
     save_filename = "None"
+    timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H:%M:%S")
     if save_videos:
-        video_wirst = np.stack(video_wirst)
+        video_wrist = np.stack(video_wrist)
         save_filename = "video_" + timestamp + "_wrist"
-        ImageSequenceClip(list(video_wirst), fps=10).write_videofile(
+        ImageSequenceClip(list(video_wrist), fps=10).write_videofile(
             save_filename + ".mp4", codec="libx264"
         )
         video_left = np.stack(video_left)
@@ -645,9 +645,9 @@ class RobotWSApp:
 def run_ws_server(args: Args):
     # 这里就创建 RobotEnv，直接连上机器人 & 打开相机
     logger.info("Initializing RobotEnv (connecting robot & cameras)...")
-    env = RobotEnv(action_space="cartesian_position", gripper_action_space="position")
+    env = RobotEnv(action_space="joint_position", gripper_action_space="position")
     robot_state, _ = env.get_state()
-    logger.info(f"Robot initial cartesian_position: {robot_state['cartesian_position']}")
+    logger.info(f"Robot initial joint_position: {robot_state['joint_position']}")
 
     app = RobotWSApp(args, env)
     try:

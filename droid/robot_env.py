@@ -36,6 +36,7 @@ class RobotEnv(gym.Env):
         # self.reset_joints = np.array([-0, -1 / 5 * np.pi, 0, -4 / 5 * np.pi, 0, 3 / 5 * np.pi, 1.9])
         # [-0.6, -1 / 5 * np.pi, 0, -4 / 5 * np.pi, 0, 3 / 5 * np.pi, 1.9]
         self.reset_joints = np.array([-0.2, -1 / 5 * np.pi, 0, -3.7 / 5 * np.pi, 0, 2.7 / 5 * np.pi, 2.2])  #####
+        # self.reset_joints = np.array([-0.27517385, -0.619897 ,   0.2653431  ,-2.2437236  ,-0.07290433 , 1.62032083, 2.40461694])  #####
         
         self.randomize_low = np.array([-0.1, -0.2, -0.1, -0.3, -0.3, -0.3])
         self.randomize_high = np.array([0.1, 0.2, 0.1, 0.3, 0.3, 0.3])

@@ -14,6 +14,7 @@ droid/camera_utils/__init__.py
 droid/camera_utils/info.py
 droid/camera_utils/camera_readers/__init__.py
 droid/camera_utils/camera_readers/zed_camera.py
+droid/camera_utils/camera_readers/zedx_camera.py
 droid/camera_utils/recording_readers/mp4_reader.py
 droid/camera_utils/recording_readers/svo_reader.py
 droid/camera_utils/wrappers/__init__.py
@@ -1190,13 +1191,11 @@ droid/user_interface/gui_parameters.py
 droid/user_interface/misc.py
 droid/user_interface/text.py
 scripts/main.py
-scripts/main_delta_absolute.py
-scripts/main_delta_absolute_6drot_eef.py
-scripts/main_delta_absolute_eef.py
-scripts/main_delta_absolute_eef_rpc.py
-scripts/main_delta_delta_eef.py
-scripts/main_delta_joint.py
 scripts/main_flower.py
+scripts/main_flower_replay.py
+scripts/main_flower_residual.py
+scripts/main_flower_residual_copy.py
+scripts/main_flower_rpc.py
 scripts/postprocess.py
 scripts/convert/svo_to_depth.py
 scripts/convert/svo_to_mp4.py

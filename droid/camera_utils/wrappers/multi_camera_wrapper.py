@@ -2,25 +2,46 @@ import os
 import random
 from collections import defaultdict
 
-from droid.camera_utils.camera_readers.zed_camera import gather_zed_cameras
+# from droid.camera_utils.camera_readers.zed_camera import gather_zed_cameras  # ZED
+from droid.camera_utils.camera_readers.zedx_camera import gather_zed_cameras  # ZEDX
 from droid.camera_utils.info import get_camera_type
 
 
 class MultiCameraWrapper:
     def __init__(self, camera_kwargs={}):
         # Open Cameras #
-        zed_cameras = gather_zed_cameras()
+        # zed_cameras = gather_zed_cameras()  # ZED
+        stream_configs = [  # ZEDX
+            {
+                "name": "left_cam",
+                "ip": "192.168.55.1",
+                "port": 30000,
+                "is_hand_camera": False,
+            },
+            {
+                "name": "wrist_cam",
+                "ip": "192.168.55.1",
+                "port": 30002,
+                "is_hand_camera": True,
+            },
+        ]
+        zed_cameras = gather_zed_cameras(stream_configs=stream_configs)
+
         self.camera_dict = {cam.serial_number: cam for cam in zed_cameras}
-        print(zed_cameras)
+        # print("zed_cameras:  ", zed_cameras)
         # Set Correct Parameters #
-        for cam_id in self.camera_dict.keys():
-            cam_type = get_camera_type(cam_id)
-            curr_cam_kwargs = camera_kwargs.get(cam_type, {})
-            self.camera_dict[cam_id].set_reading_parameters(**curr_cam_kwargs)
+        # for cam_id in self.camera_dict.keys():  # ZED
+        #     cam_type = get_camera_type(cam_id)
+        #     curr_cam_kwargs = camera_kwargs.get(cam_type, {})
+        #     self.camera_dict[cam_id].set_reading_parameters(**curr_cam_kwargs)
+        for cam_id, cam in self.camera_dict.items():  # ZEDX
+            curr_cam_kwargs = camera_kwargs.get(cam_id, {})
+            cam.set_reading_parameters(**curr_cam_kwargs)
 
         # Launch Camera #
         self.set_trajectory_mode()
-
+        # print(self.camera_dict.keys())
+    
     ### Calibration Functions ###
     def get_camera(self, camera_id):
         return self.camera_dict[camera_id]
@@ -46,17 +67,18 @@ class MultiCameraWrapper:
 
     def set_trajectory_mode(self):
         # If High Res Calibration, Close All #
-        close_all = any(
-            [cam.high_res_calibration and cam.current_mode == "calibration" for cam in self.camera_dict.values()]
-        )
+        # close_all = any(
+        #     [cam.high_res_calibration and cam.current_mode == "calibration" for cam in self.camera_dict.values()]
+        # )
 
-        if close_all:
-            for cam in self.camera_dict.values():
-                cam.disable_camera()
+        # if close_all:
+        #     for cam in self.camera_dict.values():
+        #         cam.disable_camera()
 
         # Put All Cameras In Trajectory Mode #
-        for cam in self.camera_dict.values():
-            cam.set_trajectory_mode()
+        # for cam in self.camera_dict.values():
+        #     cam.set_trajectory_mode()
+        pass
 
     ### Data Storing Functions ###
     def start_recording(self, recording_folderpath):
@@ -81,13 +103,15 @@ class MultiCameraWrapper:
         random.shuffle(all_cam_ids)
 
         for cam_id in all_cam_ids:
+            # print("ddddddddddddddddd",cam_id)
             if not self.camera_dict[cam_id].is_running():
                 continue
-            data_dict, timestamp_dict = self.camera_dict[cam_id].read_camera()
+            data_dict = self.camera_dict[cam_id].read_camera()
 
             for key in data_dict:
+
                 full_obs_dict[key].update(data_dict[key])
-            full_timestamp_dict.update(timestamp_dict)
+            # full_timestamp_dict.update(timestamp_dict)
 
         return full_obs_dict, full_timestamp_dict
 
