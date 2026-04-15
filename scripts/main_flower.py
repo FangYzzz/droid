@@ -48,7 +48,7 @@ class Args:
 
     # Remote server parameters
     remote_host: str = "0.0.0.0"  # 改成跑 server.py 那台机器的 IP
-    remote_port: int = 8003       # server.py 里用的端口（你现在是 8003）
+    remote_port: int = 8008       # server.py 里用的端口（你现在是 8003）
 
 
 @contextlib.contextmanager
@@ -103,7 +103,7 @@ def main(args: Args):
     print("Initial joint positions:", robot_state.get("joint_positions", "N/A"))
     
     # SERVER = "http://<server_ip>:8003"
-    SERVER = "http://0.0.0.0:8003"
+    SERVER = "http://0.0.0.0:8008"
     
     while True:
         instruction = input("Enter instruction: ").strip()
@@ -208,18 +208,18 @@ def main(args: Args):
                 break
 
         # ================== 后处理：保存视频 & 人工评价 ==================
-        # save_filename = "None"
-        # if input("Save videos? (enter y or n) ").lower() == "y":
-        #     os.makedirs("videos", exist_ok=True)
-        #     timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H:%M:%S")
+        save_filename = "None"
+        if input("Save videos? (enter y or n) ").lower() == "y":
+            os.makedirs("videos", exist_ok=True)
+            timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H:%M:%S")
 
-        #     video_wrist = np.stack(video_wrist)
-        #     save_filename = os.path.join("videos", f"video_{timestamp}_wrist")
-        #     ImageSequenceClip(list(video_wrist), fps=10).write_videofile(save_filename + ".mp4", codec="libx264")
+            video_wrist = np.stack(video_wrist)
+            save_filename = os.path.join("videos", f"video_{timestamp}_wrist")
+            ImageSequenceClip(list(video_wrist), fps=10).write_videofile(save_filename + ".mp4", codec="libx264")
 
-        #     video_left = np.stack(video_left)
-        #     save_filename = os.path.join("videos", f"video_{timestamp}_left")
-        #     ImageSequenceClip(list(video_left), fps=10).write_videofile(save_filename + ".mp4", codec="libx264")
+            video_left = np.stack(video_left)
+            save_filename = os.path.join("videos", f"video_{timestamp}_left")
+            ImageSequenceClip(list(video_left), fps=10).write_videofile(save_filename + ".mp4", codec="libx264")
 
         # success: float | None = None
         # while success is None:
@@ -265,14 +265,20 @@ def _extract_observation(args: Args, obs_dict, *, save_to_disk=False):
     image_observations = obs_dict["image"]
     left_image, right_image, wrist_image = None, None, None
 
+    # for key in image_observations:
+    #     # Note the "left" below refers to the left camera in the stereo pair.
+    #     # The model is only trained on left stereo cams, so we only feed those.
+    #     if args.left_camera_id in key and "left" in key:
+    #         left_image = image_observations[key]
+    #     # elif args.right_camera_id in key and "left" in key:
+    #     #     right_image = image_observations[key]
+    #     elif args.wrist_camera_id in key and "left" in key:
+    #         wrist_image = image_observations[key]
     for key in image_observations:
-        # Note the "left" below refers to the left camera in the stereo pair.
-        # The model is only trained on left stereo cams, so we only feed those.
-        if args.left_camera_id in key and "left" in key:
+        print(key)
+        if "left_cam" == key:
             left_image = image_observations[key]
-        # elif args.right_camera_id in key and "left" in key:
-        #     right_image = image_observations[key]
-        elif args.wrist_camera_id in key and "left" in key:
+        elif "wrist_cam" == key:
             wrist_image = image_observations[key]
 
     # Drop the alpha dimension

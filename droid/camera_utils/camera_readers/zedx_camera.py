@@ -69,7 +69,7 @@ class StreamZedCamera:
         self.started = False   
         self.serial_number = None
 
-        
+        self._intrinsics={}
 
         self._current_params = None
         self._extrinsics = {}
@@ -132,7 +132,7 @@ class StreamZedCamera:
             - Depth mode : {self.init_params.depth_mode}
             - Intrinsic  : {self.intrinsic}
             """)
-        print("open succeess!!!!")
+        # print("open succeess!!!!")
         self.started = True
 
     def disable_advanced_calibration(self):
@@ -274,9 +274,11 @@ class StreamZedCamera:
         # if self.skip_reading:
         #     return {}, {}
 
-        timestamp_dict = {self.serial_number}
-
-        # err = self._cam.grab(self._runtime)
+        # timestamp_dict = {self.serial_number}
+        # self.runtime_params = self.sl.RuntimeParameters()
+        err = self.zed.grab(self.runtime_params)
+        # if err != self.sl.ERROR_CODE.SUCCESS:
+        #     raise RuntimeError(f"[ZED] Grab failed: {err}")
         # if err != sl.ERROR_CODE.SUCCESS:
             # return None
             # return {}, {}

@@ -49,7 +49,7 @@ class Args:
 
     # Remote server parameters
     remote_host: str = "0.0.0.0"  # 改成跑 server.py 那台机器的 IP
-    remote_port: int = 8003       # server.py 里用的端口（你现在是 8003）
+    remote_port: int = 8008       # server.py 里用的端口（你现在是 8003）
 
 
 @contextlib.contextmanager

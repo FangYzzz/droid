@@ -37,7 +37,7 @@ robot_client:
       cartesian_pos_lower:
         - -1.0
         - -1.0
-        - -1.0
+        - 1.0 # -1.0
 
       # the remaining limits are set to the original franka limits minus a margin
       joint_pos_upper: #margin: 0.1 rad

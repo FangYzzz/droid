@@ -15,14 +15,20 @@ class MultiCameraWrapper:
             {
                 "name": "left_cam",
                 "ip": "192.168.55.1",
-                "port": 30000,
+                "port": 30004, # 30000
                 "is_hand_camera": False,
             },
             {
                 "name": "wrist_cam",
                 "ip": "192.168.55.1",
-                "port": 30002,
+                "port": 30000, # 30002
                 "is_hand_camera": True,
+            },
+            {
+                "name": "right_cam",
+                "ip": "192.168.55.1",
+                "port": 30002, # 30004
+                "is_hand_camera": False,
             },
         ]
         zed_cameras = gather_zed_cameras(stream_configs=stream_configs)
