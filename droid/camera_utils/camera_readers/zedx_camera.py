@@ -62,6 +62,8 @@ class StreamZedCamera:
         self.zed = self.sl.Camera()
         self.init_params = self.sl.InitParameters()
         self.runtime_params = self.sl.RuntimeParameters()
+        # self.runtime_params.confidence_threshold = 50   ####
+        # self.runtime_params.texture_confidence_threshold = 100 ####
         self.image = self.sl.Mat()
         self.depth = self.sl.Mat()
         self.close = 0.1
@@ -221,7 +223,8 @@ class StreamZedCamera:
         self._left_pointcloud = sl.Mat()
         self._right_pointcloud = sl.Mat()
         self._runtime = sl.RuntimeParameters()
-
+        self._runtime.confidence_threshold = 50 
+        self._runtime.texture_confidence_threshold = 100
         self._current_params = init_params
         sl_params = sl.InitParameters(**init_params)
         sl_params.coordinate_units = sl.UNIT.METER

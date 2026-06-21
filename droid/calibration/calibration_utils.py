@@ -13,13 +13,15 @@ from droid.misc.parameters import *
 from droid.misc.transformations import *
 
 # Create Board #
-CHARUCO_BOARD = aruco.CharucoBoard_create(
-    squaresX=CHARUCOBOARD_COLCOUNT,
-    squaresY=CHARUCOBOARD_ROWCOUNT,
-    squareLength=CHARUCOBOARD_CHECKER_SIZE,
-    markerLength=CHARUCOBOARD_MARKER_SIZE,
-    dictionary=ARUCO_DICT,
-)
+# CHARUCO_BOARD = aruco.CharucoBoard(
+#     squaresX=CHARUCOBOARD_COLCOUNT,
+#     squaresY=CHARUCOBOARD_ROWCOUNT,
+#     squareLength=CHARUCOBOARD_CHECKER_SIZE,
+#     markerLength=CHARUCOBOARD_MARKER_SIZE,
+#     dictionary=ARUCO_DICT,
+# )
+
+CHARUCO_BOARD = None
 
 # Detector Params
 detector_params = cv2.aruco.DetectorParameters_create()

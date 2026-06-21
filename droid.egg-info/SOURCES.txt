@@ -2,6 +2,7 @@ README.md
 pyproject.toml
 setup.py
 droid/__init__.py
+droid/franka_env.py
 droid/robot_env.py
 droid.egg-info/PKG-INFO
 droid.egg-info/SOURCES.txt
@@ -1147,6 +1148,8 @@ droid/fairo/tools/servermgr/app.py
 droid/fairo/tools/servermgr/launch.py
 droid/fairo/tools/servermgr/ping_cuberite.py
 droid/franka/__init__.py
+droid/franka/franka_robot.py
+droid/franka/franka_server.py
 droid/franka/robot.py
 droid/misc/parameters.py
 droid/misc/pointcloud_utils.py
@@ -1190,12 +1193,12 @@ droid/user_interface/gui.py
 droid/user_interface/gui_parameters.py
 droid/user_interface/misc.py
 droid/user_interface/text.py
+scripts/collector.py
 scripts/main.py
+scripts/main_delta_absolute_eef_3cams.py
 scripts/main_flower.py
 scripts/main_flower_replay.py
-scripts/main_flower_residual.py
-scripts/main_flower_residual_copy.py
-scripts/main_flower_rpc.py
+scripts/main_pi05_residual.py
 scripts/postprocess.py
 scripts/convert/svo_to_depth.py
 scripts/convert/svo_to_mp4.py

@@ -37,8 +37,7 @@ import threading
 
 faulthandler.enable()
 
-# 控制频率（和原 DROID 一样）
-# DROID_CONTROL_FREQUENCY = 6  # Hz
+# DROID_CONTROL_FREQUENCY = 15  # Hz
 
 
 @dataclasses.dataclass
@@ -56,13 +55,14 @@ class Args:
 def json_response(obj):
     return JSONResponse(json_numpy.dumps(obj))
 
-class TrainingServer:
+class ResidualServer:
     def __init__(self, env=None, args=None, gpt_server=None, pi05_client=None):  # flower_server
         self.env = env
         self.args = args
         self.gpt_server = gpt_server
         self.pi05_client = pi05_client
-        self.text = "pick up the tomato and place it into the bowl"
+        # self.text = "pick up the tomato and place it into the bowl"
+        self.text = "pick up the cube and place it into the bowl"
         self.max_timesteps = args.max_timesteps
         self.t_step = 0
         self.round = 0
@@ -180,19 +180,15 @@ class TrainingServer:
             pred_action_chunk = self.pi05_client.infer(request_data)["actions"]
             assert pred_action_chunk.shape == (50, 8) # 10,8
             # action = pred_action_chunk[0]
-            action = pred_action_chunk[:40]  # 20
+            action = pred_action_chunk[:20]  # 20
+            action = action[::2]
 
-            if action[-1].item() > 0.5:
-                action = np.concatenate([action[:-1], np.ones((1,))])
-                # gripper = np.ones((1,))
-            else:
-                # action[-1] = 0.0
-                action = np.concatenate([action[:-1], np.zeros((1,))])
-                # gripper = np.zeros((1,))
-            
+            action = np.asarray(action).copy()
+            action[:, -1] = (action[:, -1] > 0.8).astype(action.dtype) # 0.6 0.5
+
             # 如果前3维是 delta position，就转成 absolute position
-            action[:,:3] = action[:,:3] + eef_pose[:3]  # todo!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            action = np.asarray(action, dtype=np.float32)
+            action[:,:3] = action[:,:3] + eef_pose[:3]  # [20,8] todo!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            action = np.asarray(action, dtype=np.float32) 
         else:
             action = np.zeros((50,8))
         # # 归一化 quaternion，避免数值漂
@@ -207,7 +203,6 @@ class TrainingServer:
 
         # action_base = np.concatenate([action[:6], gripper], axis=-1)   # shape = (8,)
         return json_response(action)
-
 
     def get_online_action_base(self, left_resized, right_resized, wrist_resized, eef_pose, gripper_position):
         eef_rpy = eef_pose[3:6]  # [x, y, z, roll, pitch, yaw]
@@ -226,7 +221,8 @@ class TrainingServer:
         # Ctrl+C will be handled after the server call is complete
         pred_action_chunk = self.pi05_client.infer(request_data)["actions"]
         assert pred_action_chunk.shape == (50, 8) # 10,8
-        action = pred_action_chunk[:40]  # 20
+        action = pred_action_chunk[:20]  # 20
+        action = action[::2]
 
         # gripper binary
         # if action[:,-1].item() > 0.5:
@@ -248,6 +244,7 @@ class TrainingServer:
     def get_transition(self, payload: Dict[Any, Any]):
         combined_action = np.asarray(payload["combined_action"], dtype=np.float32)  # (8,)
         query_action_base = payload["query_action_base"]
+
         #----------------------------quat -> rpy----------------------------#
         pos = combined_action[:3]
         q_action = combined_action[3:7]
@@ -476,7 +473,7 @@ def main(args: Args):
     # pi05_server = f"http://{args.pi05_host}:{args.pi05_port}"
     pi05_client = websocket_client_policy.WebsocketClientPolicy(args.pi05_host, args.pi05_port)
     # Rollout server - Residual training client
-    training_server = TrainingServer(env, args, gpt_server, pi05_client)
+    training_server = ResidualServer(env, args, gpt_server, pi05_client)
     training_server.run(host="127.0.0.1", port=8009)
    
     # 记录结果的 DataFrame

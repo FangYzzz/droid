@@ -46,7 +46,7 @@ class Args:
     )
 
     # Rollout parameters
-    max_timesteps: int = 300  # 600
+    max_timesteps: int = 180  # 600
     # How many actions to execute from a predicted action chunk before querying policy server again
     # 8 is usually a good default (equals 0.5 seconds of action execution).
     open_loop_horizon: int = 45  #45 8 
@@ -163,6 +163,7 @@ def main(args: Args):
                     eef_rpy = eef_pose[3:6]
                     eef_quat = R.from_euler('xyz', eef_rpy, degrees=False).as_quat()
                     eef_pose = np.concatenate([eef_pose[:3], eef_quat], axis=-1)
+                    # print("eef_pose: ",eef_pose)
                     #######################################
                     # if curr_obs["gripper_position"]<0.3:
                     #     curr_obs["gripper_position"]=0.0
@@ -238,6 +239,7 @@ def main(args: Args):
                 # action[:-2] = np.clip(action[:-2], -0.1, .1)
                 # action = np.clip(action, -0.2, 0.2) ###
                 # action[:-2] = action[:-2]*2
+                # print(action)
                 action[:3] = action[:3] + eef_state[:3]
                 # 触地保护
                 z_min = 0.225
