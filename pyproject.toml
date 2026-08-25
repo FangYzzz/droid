@@ -17,6 +17,7 @@ dependencies = [
     "customtkinter",
     "dm-control==1.0.5",
     "gym",
+    "grpcio",
     "h5py",
     "imageio",
     "matplotlib",

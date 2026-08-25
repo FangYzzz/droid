@@ -23,8 +23,12 @@ from droid.misc.transformations import *
 
 CHARUCO_BOARD = None
 
-# Detector Params
-detector_params = cv2.aruco.DetectorParameters_create()
+# Detector Params. OpenCV >= 4.7 exposes this as a constructor, while older
+# releases use the factory function.
+if hasattr(cv2.aruco, "DetectorParameters_create"):
+    detector_params = cv2.aruco.DetectorParameters_create()
+else:
+    detector_params = cv2.aruco.DetectorParameters()
 detector_params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
 calib_flags = cv2.CALIB_USE_INTRINSIC_GUESS + cv2.CALIB_FIX_PRINCIPAL_POINT + cv2.CALIB_FIX_FOCAL_LENGTH
 

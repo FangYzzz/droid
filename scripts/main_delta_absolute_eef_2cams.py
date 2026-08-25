@@ -243,8 +243,9 @@ def main(args: Args):
                 # print(action)
                 action[:3] = action[:3] + eef_state[:3]
                 # 触地保护
-                z_min = 0.225
-                action[2] = max(action[2], z_min)
+                # z_min = 0.225 # 0.225
+                # action[2] = max(action[2], z_min)
+                print("action[2]: ", action[2])
                 # action[0] = action[0]+0.005
                 # action[1] = action[1]+0.01
                 # action[2] = action[2]+0.01

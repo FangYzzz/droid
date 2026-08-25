@@ -33,7 +33,7 @@ robot_client:
       cartesian_pos_upper:
         - 1.0
         - 1.0
-        - 1.0
+        - 1.2 # 1.0
       cartesian_pos_lower:
         - -1.0
         - -1.0
